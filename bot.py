@@ -4,7 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # ==================== تنظیمات شما ====================
-BOT_TOKEN = "7363392477:AAHupuTjMCEJz3B1vLYGIYeeHLCHW5ej8pI"
+BOT_TOKEN = "7363392477:AAEHHx6C3MAhCQVryRKKD7G2_lgEVeArkTw"
 CHANNEL_USERNAME = "@estelajii"
 GROUP_USERNAME = "@estlji"
 SERVICE_NAME = "پشتیبانی استعلاجی"
