@@ -10,7 +10,7 @@ CHANNEL_USERNAME = "@estelajii"
 GROUP_USERNAME = "@estlji"
 SERVICE_NAME = "پشتیبانی استعلاجی"
 ADMIN_ID = 7158635583
-SUPPORT_USERNAME = "ervid"  # آیدی مشاوره شما
+SUPPORT_USERNAME = "ervid"
 # ====================================================
 
 logging.basicConfig(
@@ -25,10 +25,8 @@ async def check_membership(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> 
         group_member = await context.bot.get_chat_member(GROUP_USERNAME, user_id)
         
         valid_statuses = ['member', 'administrator', 'creator']
-        channel_ok = channel_member.status in valid_statuses
-        group_ok = group_member.status in valid_statuses
-        
-        return channel_ok and group_ok
+        return (channel_member.status in valid_statuses and 
+                group_member.status in valid_statuses)
     except Exception as e:
         logging.error(f"خطا در بررسی عضویت: {e}")
         return False
@@ -70,27 +68,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if await check_membership(user_id, context):
         await update.message.reply_text(
-            "✅ پیام شما دریافت شد و به تیم پشتیبانی ارسال گردید.\n\n"
+            "✅ پیام شما دریافت شد!\n\n"
             f"💎 **جهت مشاوره تخصصی با پشتیبان:**\n"
             f"@{SUPPORT_USERNAME}"
         )
     else:
         await update.message.delete()
-        keyboard = [[InlineKeyboardButton("🔍 بررسی مجدد عضویت", callback_data="check_membership")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        warning_msg = await update.message.reply_text(
-            "❌ شما هنوز در کانال و/یا گروه ما عضو نیستید!\n\n"
-            "⚠️ لطفاً ابتدا با استفاده از دکمه‌های بالا عضو شوید و سپس مجدداً تلاش کنید.",
-            reply_markup=reply_markup
-        )
-        
-        # حذف پیام اخطار بعد از 10 ثانیه
-        await asyncio.sleep(10)
-        try:
-            await warning_msg.delete()
-        except:
-            pass
+        await update.message.reply_text("❌ لطفاً اول عضو شوید!")
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """مدیریت کلیک روی دکمه"""
@@ -109,23 +93,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"@{SUPPORT_USERNAME}"
         )
     else:
-        keyboard = [
-            [InlineKeyboardButton("📢 عضویت در کانال", url=f"https://t.me/{CHANNEL_USERNAME[1:]}")],
-            [InlineKeyboardButton("👥 عضویت در گروه", url=f"https://t.me/{GROUP_USERNAME[1:]}")],
-            [InlineKeyboardButton("🔍 بررسی مجدد", callback_data="check_membership")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(
-            f"❌ متأسفیم {user_name} عزیز!\n"
-            f"هنوز در کانال و/یا گروه ما عضو نیستید.\n\n"
-            f"⚠️ لطفاً از دکمه‌های بالا برای عضویت استفاده کنید و سپس بررسی نمایید.",
-            reply_markup=reply_markup
-        )
-
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """مدیریت خطاها"""
-    logging.error(f"خطا رخ داد: {context.error}")
+        await query.edit_message_text("❌ هنوز عضو نشدید!")
 
 def main():
     """تابع اصلی"""
@@ -137,14 +105,11 @@ def main():
     
     application = Application.builder().token(BOT_TOKEN).build()
     
-    # اضافه کردن هندلرها
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_handler, pattern="^check_membership$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_error_handler(error_handler)
     
-    # اجرای ربات
-    print("🤖 ربات فعال شد! برای توقف Ctrl+C را بزنید.")
+    print("✅ ربات فعال شد!")
     application.run_polling()
 
 if __name__ == '__main__':
