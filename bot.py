@@ -1,8 +1,7 @@
 import logging
-import asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 import os
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 
 # ==================== تنظیمات شما ====================
 BOT_TOKEN = os.environ.get('BOT_TOKEN', '8588091872:AAG7XZEwWjMB7614B2nigKMGZOqInnMwJWI')
@@ -18,11 +17,11 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-async def check_membership(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+def check_membership(user_id: int, context: CallbackContext) -> bool:
     """بررسی عضویت کاربر در کانال و گروه"""
     try:
-        channel_member = await context.bot.get_chat_member(CHANNEL_USERNAME, user_id)
-        group_member = await context.bot.get_chat_member(GROUP_USERNAME, user_id)
+        channel_member = context.bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        group_member = context.bot.get_chat_member(GROUP_USERNAME, user_id)
         
         valid_statuses = ['member', 'administrator', 'creator']
         return (channel_member.status in valid_statuses and 
@@ -31,13 +30,13 @@ async def check_membership(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> 
         logging.error(f"خطا در بررسی عضویت: {e}")
         return False
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def start(update: Update, context: CallbackContext):
     """دستور /start"""
     user_id = update.effective_user.id
     user_name = update.effective_user.first_name
     
-    if await check_membership(user_id, context):
-        await update.message.reply_text(
+    if check_membership(user_id, context):
+        update.message.reply_text(
             f"✅ سلام {user_name} عزیز!\n"
             f"از اینکه در کانال و گروه {SERVICE_NAME} عضو هستید متشکریم.\n\n"
             f"📝 اکنون می‌توانید سوال یا پیام پشتیبانی خود را ارسال کنید.\n\n"
@@ -52,40 +51,40 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(
+        update.message.reply_text(
             f"⚠️ سلام {user_name} عزیز!\n"
             f"برای استفاده از ربات {SERVICE_NAME} و ارسال پیام، باید ابتدا در کانال و گروه ما عضو شوید.\n\n"
             "✅ پس از عضویت، روی دکمه «بررسی عضویت» کلیک کنید.",
             reply_markup=reply_markup
         )
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def handle_message(update: Update, context: CallbackContext):
     """پردازش پیام‌های کاربر"""
     user_id = update.effective_user.id
     
     if update.message.text and update.message.text.startswith('/'):
         return
 
-    if await check_membership(user_id, context):
-        await update.message.reply_text(
+    if check_membership(user_id, context):
+        update.message.reply_text(
             "✅ پیام شما دریافت شد!\n\n"
             f"💎 **جهت مشاوره تخصصی با پشتیبان:**\n"
             f"@{SUPPORT_USERNAME}"
         )
     else:
-        await update.message.delete()
-        await update.message.reply_text("❌ لطفاً اول عضو شوید!")
+        update.message.delete()
+        update.message.reply_text("❌ لطفاً اول عضو شوید!")
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def button_handler(update: Update, context: CallbackContext):
     """مدیریت کلیک روی دکمه"""
     query = update.callback_query
-    await query.answer()
+    query.answer()
     
     user_id = query.from_user.id
     user_name = query.from_user.first_name
     
-    if await check_membership(user_id, context):
-        await query.edit_message_text(
+    if check_membership(user_id, context):
+        query.edit_message_text(
             f"✅ سلام {user_name} عزیز!\n"
             f"عضویت شما تایید شد! 🎉\n\n"
             f"📝 اکنون می‌توانید پیام پشتیبانی خود را ارسال کنید.\n\n"
@@ -93,7 +92,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"@{SUPPORT_USERNAME}"
         )
     else:
-        await query.edit_message_text("❌ هنوز عضو نشدید!")
+        query.edit_message_text("❌ هنوز عضو نشدید!")
 
 def main():
     """تابع اصلی"""
@@ -103,14 +102,16 @@ def main():
     print(f"👤 ادمین: {ADMIN_ID}")
     print(f"💎 پشتیبان: @{SUPPORT_USERNAME}")
     
-    application = Application.builder().token(BOT_TOKEN).build()
+    updater = Updater(BOT_TOKEN)
+    dispatcher = updater.dispatcher
     
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler, pattern="^check_membership$"))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CallbackQueryHandler(button_handler, pattern="^check_membership$"))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
     
     print("✅ ربات فعال شد!")
-    application.run_polling()
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
     main()
